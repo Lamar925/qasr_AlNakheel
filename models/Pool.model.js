@@ -11,6 +11,10 @@ const Pool = sequelize.define('Pool', {
         type: DataTypes.JSON,
         allowNull: false,
     },
+    description: {
+        type: DataTypes.JSON,
+        allowNull: false,
+    },
     size: {
         type: DataTypes.STRING(200),
     },

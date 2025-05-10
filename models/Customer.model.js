@@ -56,6 +56,10 @@ const Customer = sequelize.define("Customer", {
   profile_picture: {
     type: DataTypes.STRING(255),
   },
+  banned: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: false,
+  },
   is_verified: {
     type: DataTypes.BOOLEAN,
     defaultValue: false,

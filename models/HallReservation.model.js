@@ -37,13 +37,16 @@ const HallReservation = sequelize.define("HallReservation", {
         type: DataTypes.DATE,
         allowNull: false,
     },
+    details: {
+        type: DataTypes.TEXT,
+    },
     total_price: {
         type: DataTypes.DECIMAL(10, 2),
         allowNull: false,
     },
     status: {
         type: DataTypes.ENUM("pending", "confirmed", "cancelled"),
-        defaultValue: "confirmed",
+        defaultValue: "pending",
         allowNull: false,
     },
     payed: {
