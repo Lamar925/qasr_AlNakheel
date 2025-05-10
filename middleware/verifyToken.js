@@ -34,7 +34,7 @@ const verifyTokenUserLoggedIn = (req, res, next) => {
             return res.status(401).json({ message: 'Failed to authenticate token.' });
         }
 
-        if (decoded.role === "user" && req.parmas.id === decoded.id) {
+        if (decoded.role === "user" && req.parmas.id === decoded.id && decoded.banned !== false) {
             next();
         } else {
             return res.status(403).json({ message: 'You do not have the necessary permissions.' });
@@ -48,12 +48,12 @@ const verifyTokenUserVerified = (req, res, next) => {
     if (!accessToken) {
         return res.status(403).json({ message: 'No token provided.' });
     }
-    
+
     jwt.verify(accessToken, process.env.JWT_ACCESS_SECRET, (err, decoded) => {
         if (err) {
             return res.status(401).json({ message: 'Failed to authenticate token.' });
         }
-        if (decoded.role === "user" && req.params.id === decoded.id && decoded.is_verified === true) {
+        if (decoded.role === "user" && req.params.id === decoded.id && decoded.is_verified === true && decoded.banned !== false) {
             next();
         } else {
             return res.status(403).json({ message: 'You do not have the necessary permissions.' });
