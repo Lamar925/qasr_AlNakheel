@@ -1,4 +1,5 @@
 import { createRequire } from "module";
+import { col, fn, Op } from "sequelize";
 const require = createRequire(import.meta.url);
 import { deleteImageFromCloudinary } from "../../config/helpers/cloudinary.mjs";
 
@@ -6,6 +7,7 @@ import { deleteImageFromCloudinary } from "../../config/helpers/cloudinary.mjs";
 const Sequelize = require("../../config/dbConnection");
 const Restaurant = require("../../models/Restaurant.model");
 const RestaurantImages = require("../../models/RestaurantImages.model");
+const Rating = require("../../models/Rating.model");
 
 const { getMessage } = require("../language/messages");
 const getLanguage = (req) => (req.headers["accept-language"] === "ar" ? "ar" : "en");
@@ -62,29 +64,84 @@ export const getRestaurants = async (req, res) => {
             { model: RestaurantImages, as: "images" },
         ],
     });
+
     if (!restaurants.length) {
         return res.status(404).json({ message: getMessage("restaurantsNotFound", lang) });
     }
-    res.status(200).json(restaurants);
 
+    const restaurantIds = restaurants.map(rest => rest.id);
+
+    // ✅ جلب التقييمات المجمعة للمطاعم
+    const ratings = await Rating.findAll({
+        where: {
+            rest_id: {
+                [Op.in]: restaurantIds
+            }
+        },
+        attributes: [
+            "rest_id",
+            [fn("AVG", col("rating")), "averageRating"],
+            [fn("COUNT", col("id")), "ratingCount"]
+        ],
+        group: ["rest_id"]
+    });
+
+    // تجهيز خريطة التقييمات
+    const ratingsMap = {};
+    ratings.forEach(rating => {
+        ratingsMap[rating.rest_id] = {
+            averageRating: parseFloat(rating.get("averageRating")).toFixed(1),
+            ratingCount: parseInt(rating.get("ratingCount"))
+        };
+    });
+
+    // دمج التقييمات مع المطاعم
+    const restaurantsWithRatings = restaurants.map(rest => {
+        const ratingData = ratingsMap[rest.id] || { averageRating: "0.0", ratingCount: 0 };
+        return {
+            ...rest.toJSON(),
+            averageRating: ratingData.averageRating,
+            ratingCount: ratingData.ratingCount
+        };
+    });
+
+    res.status(200).json(restaurantsWithRatings);
 };
 
 export const getRestaurantById = async (req, res) => {
     const lang = getLanguage(req);
     const { id } = req.params;
 
-    const restaurant = await Restaurant.findByPk(id,
-        {
-            include: [
-                { model: RestaurantImages, as: "images" },
-            ],
-        }
-    );
+    const restaurant = await Restaurant.findByPk(id, {
+        include: [
+            { model: RestaurantImages, as: "images" },
+        ],
+    });
+
     if (!restaurant) {
         return res.status(404).json({ message: getMessage("restaurantsNotFound", lang) });
     }
-    res.status(200).json(restaurant);
 
+    // ✅ جلب تقييم المطعم
+    const rating = await Rating.findOne({
+        where: { rest_id: id },
+        attributes: [
+            [fn("AVG", col("rating")), "averageRating"],
+            [fn("COUNT", col("id")), "ratingCount"]
+        ],
+    });
+
+    const averageRating = rating?.get("averageRating") ? parseFloat(rating.get("averageRating")).toFixed(1) : "0.0";
+    const ratingCount = rating?.get("ratingCount") ? parseInt(rating.get("ratingCount")) : 0;
+
+    // دمج التقييم مع بيانات المطعم
+    const restaurantWithRating = {
+        ...restaurant.toJSON(),
+        averageRating,
+        ratingCount
+    };
+
+    res.status(200).json(restaurantWithRating);
 };
 
 export const updateRestaurant = async (req, res) => {

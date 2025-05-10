@@ -16,9 +16,9 @@ export const sendMessage = async (req, res) => {
     }
 
     await Contact.create({
-        cust_id, 
-        message, 
-        subject 
+        cust_id,
+        message,
+        subject
     });
 
     res.status(200).json({ message: getMessage("messageSent", lang) })
@@ -57,7 +57,7 @@ export const getCustomerMessages = async (req, res) => {
 };
 
 
-export const getAllContacts= async (req, res) => {
+export const getAllContacts = async (req, res) => {
 
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
@@ -73,6 +73,10 @@ export const getAllContacts= async (req, res) => {
         limit: limit,
         offset: (page - 1) * limit,
         order: [['date', 'DESC']],
+        include: [{
+            model: Customer,
+            attributes: ["id", "first_name", "last_name", "email"]
+        }],
     });
 
     res.status(200).json({
@@ -94,7 +98,7 @@ export const markAsRead = async (req, res) => {
     await message.update({ status: 'read' });
 
     res.status(200).json({ message: getMessage("messageMarkedAsRead", lang) })
- 
+
 }
 
 export const deleteCustomerMessage = async (req, res) => {
@@ -110,3 +114,4 @@ export const deleteCustomerMessage = async (req, res) => {
     res.status(200).json({ message: getMessage("messageDeleted", lang) })
 
 }
+

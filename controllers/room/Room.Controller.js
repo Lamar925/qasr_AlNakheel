@@ -1,16 +1,10 @@
 import { createRequire } from "module";
-import { Op } from "sequelize";
+import { col, fn, Op } from "sequelize";
 const require = createRequire(import.meta.url);
 
-const fs = require("fs");
-import { fileURLToPath } from "url";
 import { deleteImageFromCloudinary } from "../../config/helpers/cloudinary.mjs";
 const sequelize = require("../../config/dbConnection");
 
-const path = require("path");
-
-const __path = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__path);
 
 const Sequelize = require("../../config/dbConnection");
 const Room = require("../../models/Room.model");
@@ -21,6 +15,8 @@ const Service = require("../../models/Service.model");
 const RoomService = require("../../models/RoomService.model");
 const SpecialPricing = require("../../models/SpecialPricing.model");
 const RoomType = require("../../models/RoomType.model");
+const Rating = require("../../models/Rating.model");
+
 const { getMessage } = require("../language/messages");
 
 const getLanguage = (req) => (req.headers["accept-language"] === "ar" ? "ar" : "en");
@@ -96,11 +92,8 @@ export const addRoom = async (req, res) => {
 }
 
 export const getAllRoomsNotAllData = async (req, res) => {
-
     const lang = getLanguage(req);
-
     const { page = 1, limit = 10, capacity, type } = req.query;
-
     const where = {};
 
     if (capacity) {
@@ -130,12 +123,35 @@ export const getAllRoomsNotAllData = async (req, res) => {
         }],
     });
 
-    if (!rooms) {
+    if (!rooms.length) {
         return res.status(404).json({ message: getMessage("roomNotFound", lang) });
     }
 
+    const roomIds = rooms.map(room => room.id);
+
+    // ✅ جلب التقييمات
+    const ratings = await Rating.findAll({
+        where: {
+            room_id: { [Op.in]: roomIds }
+        },
+        attributes: [
+            "room_id",
+            [fn("AVG", col("rating")), "averageRating"],
+            [fn("COUNT", col("id")), "ratingCount"]
+        ],
+        group: ["room_id"]
+    });
+
+    const ratingsMap = {};
+    ratings.forEach(rating => {
+        ratingsMap[rating.room_id] = {
+            averageRating: parseFloat(rating.get("averageRating")).toFixed(1),
+            ratingCount: parseInt(rating.get("ratingCount"))
+        };
+    });
+
     const today = new Date();
-    for (const room of rooms) {
+    const roomsWithExtra = await Promise.all(rooms.map(async room => {
         const isBooked = await Booking.findOne({
             where: {
                 room_id: room.id,
@@ -144,10 +160,18 @@ export const getAllRoomsNotAllData = async (req, res) => {
                 status: "confirmed",
             },
         });
-        room.setDataValue("isBooked", !!isBooked);
-    }
 
-    res.status(200).json({ rooms: rooms, totalCount: totalCount, totalPages: Math.ceil(totalCount / limit) })
+        const ratingData = ratingsMap[room.id] || { averageRating: "0.0", ratingCount: 0 };
+
+        return {
+            ...room.toJSON(),
+            isBooked: !!isBooked,
+            averageRating: ratingData.averageRating,
+            ratingCount: ratingData.ratingCount
+        };
+    }));
+
+    res.status(200).json({ rooms: roomsWithExtra, totalCount, totalPages: Math.ceil(totalCount / limit) });
 }
 
 export const getAvailableRoomPerType = async (req, res) => {
@@ -201,13 +225,27 @@ export const getAvailableRoomPerType = async (req, res) => {
         });
 
         if (availableRoom && (!availableRoom.Bookings || availableRoom.Bookings.length === 0)) {
+            // ✅ جلب التقييم الخاص بالغرفة
+            const rating = await Rating.findOne({
+                where: { room_id: availableRoom.id },
+                attributes: [
+                    [fn("AVG", col("rating")), "averageRating"],
+                    [fn("COUNT", col("id")), "ratingCount"]
+                ],
+            });
+
+            const averageRating = rating?.get("averageRating") ? parseFloat(rating.get("averageRating")).toFixed(1) : "0.0";
+            const ratingCount = rating?.get("ratingCount") ? parseInt(rating.get("ratingCount")) : 0;
+
             const typeData = {
                 id: type.id,
                 name: type.name,
                 description: type.description,
                 room: {
                     ...availableRoom.toJSON(),
-                    isBooked: false
+                    isBooked: false,
+                    averageRating,
+                    ratingCount
                 }
             };
             result.push(typeData);
@@ -218,11 +256,8 @@ export const getAvailableRoomPerType = async (req, res) => {
 }
 
 export const getAllRooms = async (req, res) => {
-
     const lang = getLanguage(req);
-
     const { page = 1, limit = 10, capacity, type } = req.query;
-
     const where = {};
 
     if (capacity) {
@@ -264,12 +299,35 @@ export const getAllRooms = async (req, res) => {
         }],
     });
 
-    if (!rooms) {
+    if (!rooms.length) {
         return res.status(404).json({ message: getMessage("roomNotFound", lang) });
     }
 
+    const roomIds = rooms.map(room => room.id);
+
+    // ✅ جلب التقييمات
+    const ratings = await Rating.findAll({
+        where: {
+            room_id: { [Op.in]: roomIds }
+        },
+        attributes: [
+            "room_id",
+            [fn("AVG", col("rating")), "averageRating"],
+            [fn("COUNT", col("id")), "ratingCount"]
+        ],
+        group: ["room_id"]
+    });
+
+    const ratingsMap = {};
+    ratings.forEach(rating => {
+        ratingsMap[rating.room_id] = {
+            averageRating: parseFloat(rating.get("averageRating")).toFixed(1),
+            ratingCount: parseInt(rating.get("ratingCount"))
+        };
+    });
+
     const today = new Date();
-    for (const room of rooms) {
+    const roomsWithExtra = await Promise.all(rooms.map(async room => {
         const isBooked = await Booking.findOne({
             where: {
                 room_id: room.id,
@@ -278,10 +336,18 @@ export const getAllRooms = async (req, res) => {
                 status: "confirmed",
             },
         });
-        room.setDataValue("isBooked", !!isBooked);
-    }
 
-    res.status(200).json({ rooms: rooms, totalCount: totalCount, totalPages: Math.ceil(totalCount / limit) })
+        const ratingData = ratingsMap[room.id] || { averageRating: "0.0", ratingCount: 0 };
+
+        return {
+            ...room.toJSON(),
+            isBooked: !!isBooked,
+            averageRating: ratingData.averageRating,
+            ratingCount: ratingData.ratingCount
+        };
+    }));
+
+    res.status(200).json({ rooms: roomsWithExtra, totalCount, totalPages: Math.ceil(totalCount / limit) });
 }
 
 
@@ -328,10 +394,28 @@ export const getRoomById = async (req, res) => {
             status: "confirmed",
         },
     });
-    room.setDataValue("isBooked", !!isBooked);
 
-    res.status(200).json({ room: room });
+    const rating = await Rating.findOne({
+        where: { room_id },
+        attributes: [
+            [fn("AVG", col("rating")), "averageRating"],
+            [fn("COUNT", col("id")), "ratingCount"]
+        ],
+    });
+
+    const averageRating = rating?.get("averageRating") ? parseFloat(rating.get("averageRating")).toFixed(1) : "0.0";
+    const ratingCount = rating?.get("ratingCount") ? parseInt(rating.get("ratingCount")) : 0;
+
+    const roomWithExtra = {
+        ...room.toJSON(),
+        isBooked: !!isBooked,
+        averageRating,
+        ratingCount
+    };
+
+    res.status(200).json({ room: roomWithExtra });
 }
+
 
 export const changeRoomActiveStatis = async (req, res,) => {
     const lang = getLanguage(req);
@@ -724,7 +808,15 @@ export const getRoomTypeAndRoomsByTypeIdWithoutDate = async (req, res) => {
             {
                 model: Room,
                 where: { type: typeId },
-                attributes: ["id", "room_no", "capacity", "adult_guests", "child_guests", "isActive", "bed_type"],
+                attributes: [
+                    "id",
+                    "room_no",
+                    "capacity",
+                    "adult_guests",
+                    "child_guests",
+                    "isActive",
+                    "bed_type",
+                ],
                 include: [
                     {
                         model: RoomImage,
@@ -746,7 +838,7 @@ export const getRoomTypeAndRoomsByTypeIdWithoutDate = async (req, res) => {
                         model: Service,
                         through: { attributes: [] },
                         attributes: ["id", "name", "image"],
-                    }
+                    },
                 ],
             },
         ],
@@ -756,7 +848,39 @@ export const getRoomTypeAndRoomsByTypeIdWithoutDate = async (req, res) => {
         return res.status(404).json({ message: getMessage("roomTypeNotFound", lang) });
     }
 
-    res.status(200).json(roomType);
+    const roomIds = roomType.Rooms.map(room => room.id);
+
+    const ratings = await Rating.findAll({
+        where: {
+            room_id: roomIds
+        },
+        attributes: ["room_id", "rating"],
+    });
+
+    const ratingData = {};
+
+    ratings.forEach(r => {
+        if (!ratingData[r.room_id]) {
+            ratingData[r.room_id] = { sum: 0, count: 0 };
+        }
+        ratingData[r.room_id].sum += r.rating;
+        ratingData[r.room_id].count += 1;
+    });
+
+    const roomsWithRatings = roomType.Rooms.map(roomModel => {
+        const room = roomModel.toJSON();
+        const data = ratingData[room.id] || { sum: 0, count: 0 };
+        room.averageRating = data.count > 0 ? parseFloat((data.sum / data.count).toFixed(1)) : 0;
+        room.ratingCount = data.count;
+        return room;
+    });
+
+    const finalData = {
+        ...roomType.toJSON(),
+        Rooms: roomsWithRatings
+    };
+
+    res.status(200).json(finalData);
 };
 
 export const getRoomTypeAndRoomsByTypeId = async (req, res) => {
@@ -776,74 +900,101 @@ export const getRoomTypeAndRoomsByTypeId = async (req, res) => {
         return res.status(400).json({ message: getMessage("invalidDateRange", lang) });
     }
 
-        const roomType = await RoomType.findOne({
-            where: { id: typeId },
-            include: [
-                {
-                    model: Room,
-                    where: { type: typeId, isActive: true },
-                    include: [
-                        {
-                            model: RoomImage,
-                            where: { main: true },
-                            attributes: ["id", "image_name_url"],
-                        },
-                        {
-                            model: RoomPricing,
-                            attributes: ["id", "day_of_week", "price"],
-                        },
-                        {
-                            model: SpecialPricing,
-                            where: { end_date: { [Op.gt]: new Date() } },
-                            required: false,
-                            attributes: ["id", "name", "description", "start_date", "end_date", "price"],
-                        },
-                        {
-                            model: Service,
-                            through: { attributes: [] },
-                            attributes: ["id", "name", "image"],
-                        },
-                        {
-                            model: Booking,
-                            required: false,
-                            where: {
-                                status: { [Op.not]: ["canceled"] },
-                                [Op.or]: [
-                                    {
-                                        check_in_date: {
-                                            [Op.between]: [checkInDate, checkOutDate],
-                                        },
+    const roomType = await RoomType.findOne({
+        where: { id: typeId },
+        include: [
+            {
+                model: Room,
+                where: { type: typeId, isActive: true },
+                include: [
+                    {
+                        model: RoomImage,
+                        where: { main: true },
+                        attributes: ["id", "image_name_url"],
+                    },
+                    {
+                        model: RoomPricing,
+                        attributes: ["id", "day_of_week", "price"],
+                    },
+                    {
+                        model: SpecialPricing,
+                        where: { end_date: { [Op.gt]: new Date() } },
+                        required: false,
+                        attributes: ["id", "name", "description", "start_date", "end_date", "price"],
+                    },
+                    {
+                        model: Service,
+                        through: { attributes: [] },
+                        attributes: ["id", "name", "image"],
+                    },
+                    {
+                        model: Booking,
+                        required: false,
+                        where: {
+                            status: { [Op.not]: ["canceled"] },
+                            [Op.or]: [
+                                {
+                                    check_in_date: {
+                                        [Op.between]: [checkInDate, checkOutDate],
                                     },
-                                    {
-                                        check_out_date: {
-                                            [Op.between]: [checkInDate, checkOutDate],
-                                        },
+                                },
+                                {
+                                    check_out_date: {
+                                        [Op.between]: [checkInDate, checkOutDate],
                                     },
-                                    {
-                                        check_in_date: { [Op.lte]: checkInDate },
-                                        check_out_date: { [Op.gte]: checkOutDate },
-                                    },
-                                ],
-                            },
-                            attributes: ["id", "check_in_date", "check_out_date"],
+                                },
+                                {
+                                    check_in_date: { [Op.lte]: checkInDate },
+                                    check_out_date: { [Op.gte]: checkOutDate },
+                                },
+                            ],
                         },
-                    ],
-                },
-            ],
-        });
+                        attributes: ["id", "check_in_date", "check_out_date"],
+                    },
+                ],
+            },
+        ],
+    });
 
-        if (!roomType) {
-            return res.status(404).json({ message: getMessage("roomTypeNotFound", lang) });
+    if (!roomType) {
+        return res.status(404).json({ message: getMessage("roomTypeNotFound", lang) });
+    }
+
+    const availableRooms = roomType.Rooms.filter(room => room.Bookings.length === 0);
+
+    const roomIds = availableRooms.map(room => room.id);
+
+    const ratings = await Rating.findAll({
+        where: {
+            room_id: roomIds
+        },
+        attributes: ["room_id", "rating"],
+    });
+
+    const ratingData = {};
+
+    ratings.forEach(r => {
+        if (!ratingData[r.room_id]) {
+            ratingData[r.room_id] = { sum: 0, count: 0 };
         }
+        ratingData[r.room_id].sum += r.rating;
+        ratingData[r.room_id].count += 1;
+    });
 
-        const availableRooms = roomType.Rooms.filter(room => room.Bookings.length === 0);
+    const roomsWithRatings = availableRooms.map(roomModel => {
+        const room = roomModel.toJSON();
+        const data = ratingData[room.id] || { sum: 0, count: 0 };
+        room.averageRating = data.count > 0 ? parseFloat((data.sum / data.count).toFixed(1)) : 0;
+        room.ratingCount = data.count;
+        return room;
+    });
 
-        const response = {
-            ...roomType.toJSON(),
-            Rooms: availableRooms,
-        };
+    const response = {
+        ...roomType.toJSON(),
+        Rooms: roomsWithRatings,
+    };
 
-        return res.status(200).json(response);
+    return res.status(200).json(response);
 };
 
 export const getAllRoomTypesWithRoomsWithoutDate = async (req, res) => {
@@ -881,7 +1032,42 @@ export const getAllRoomTypesWithRoomsWithoutDate = async (req, res) => {
         ]
     });
 
-    res.status(200).json(roomTypes);
+    const rooms = roomTypes.flatMap(rt => rt.Rooms);
+
+    const roomIds = rooms.map(room => room.id);
+
+    const ratings = await Rating.findAll({
+        where: {
+            room_id: roomIds
+        },
+        attributes: ["room_id", "rating"],
+    });
+
+    const ratingData = {};
+
+    ratings.forEach(r => {
+        if (!ratingData[r.room_id]) {
+            ratingData[r.room_id] = { sum: 0, count: 0 };
+        }
+        ratingData[r.room_id].sum += r.rating;
+        ratingData[r.room_id].count += 1;
+    });
+
+    const roomTypesWithRatings = roomTypes.map(rt => {
+        const roomsWithRatings = rt.Rooms.map(roomModel => {
+            const room = roomModel.toJSON();
+            const data = ratingData[room.id] || { sum: 0, count: 0 };
+            room.averageRating = data.count > 0 ? parseFloat((data.sum / data.count).toFixed(1)) : 0;
+            room.ratingCount = data.count;
+            return room;
+        });
+        return {
+            ...rt.toJSON(),
+            Rooms: roomsWithRatings,
+        };
+    });
+
+    res.status(200).json(roomTypesWithRatings);
 };
 
 export const getAllRoomTypesWithAvailableRoomsByDate = async (req, res) => {
@@ -934,14 +1120,10 @@ export const getAllRoomTypesWithAvailableRoomsByDate = async (req, res) => {
                             status: { [Op.not]: ["canceled"] },
                             [Op.or]: [
                                 {
-                                    check_in_date: {
-                                        [Op.between]: [checkInDate, checkOutDate],
-                                    },
+                                    check_in_date: { [Op.between]: [checkInDate, checkOutDate] },
                                 },
                                 {
-                                    check_out_date: {
-                                        [Op.between]: [checkInDate, checkOutDate],
-                                    },
+                                    check_out_date: { [Op.between]: [checkInDate, checkOutDate] },
                                 },
                                 {
                                     check_in_date: { [Op.lte]: checkInDate },
@@ -956,9 +1138,37 @@ export const getAllRoomTypesWithAvailableRoomsByDate = async (req, res) => {
         ],
     });
 
-    // تصفية الغرف المتاحة فقط
+    const rooms = roomTypes.flatMap(rt => rt.Rooms);
+    const roomIds = rooms.map(room => room.id);
+
+    const ratings = await Rating.findAll({
+        where: {
+            room_id: roomIds
+        },
+        attributes: ["room_id", "rating"],
+    });
+
+    const ratingData = {};
+
+    ratings.forEach(r => {
+        if (!ratingData[r.room_id]) {
+            ratingData[r.room_id] = { sum: 0, count: 0 };
+        }
+        ratingData[r.room_id].sum += r.rating;
+        ratingData[r.room_id].count += 1;
+    });
+
     const response = roomTypes.map(rt => {
-        const availableRooms = rt.Rooms.filter(room => room.Bookings.length === 0);
+        const availableRooms = rt.Rooms
+            .filter(room => room.Bookings.length === 0)
+            .map(roomModel => {
+                const room = roomModel.toJSON();
+                const data = ratingData[room.id] || { sum: 0, count: 0 };
+                room.averageRating = data.count > 0 ? parseFloat((data.sum / data.count).toFixed(1)) : 0;
+                room.ratingCount = data.count;
+                return room;
+            });
+
         return {
             ...rt.toJSON(),
             Rooms: availableRooms,

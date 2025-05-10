@@ -1,10 +1,10 @@
 const express = require('express');
-const { addFacility, createHall, getHalls, getHallById, updateHall, addhallImage, updateMainImage, updateFacility, deleteFacility, deleteHallImage, deleteHall } = require('./Hall.Controller');
+const { addFacility, createHall, getHalls, getHallById, updateHall, addhallImage, updateMainImage, updateFacility, deleteFacility, deleteHallImage, deleteHall, getHallsNotAllData } = require('./Hall.Controller');
 const { uploadFacilityImages, uploadHallImages, addHallImage } = require('../../config/multerConfig');
 const router = express.Router();
 
 const multer = require("multer");
-const { createHallReservation, getCustomerReservations, cancelReservation, acceptReservation, getReservationsByHall, getReservationsByDate, getAllReservations, deleteReservation, getFutureReservations, getReservationsByHallAndDate } = require('./HallReservation.Controller');
+const { createHallReservation, cancelReservation, acceptReservation, getReservationsByHall, getReservationsByDate, getAllReservations, deleteReservation, getFutureReservations, getReservationsByHallAndDate, getCustomerHallReservations } = require('./HallReservation.Controller');
 const upload = multer();
 
 router.post("/", uploadHallImages, createHall)
@@ -14,7 +14,7 @@ router.post("/addFacility/:id", uploadFacilityImages, addFacility)
 //Hall Reservation
 router.post("/hallReservation/:id", upload.none(), createHallReservation)
 router.get("/hallReservations", getAllReservations)
-router.get("/customerHallReservation/:id", getCustomerReservations)
+router.get("/customerHallReservation/:id", getCustomerHallReservations)
 router.get("/hallReservationByHall/:id", getReservationsByHall)
 router.get("/getReservationInDay/:date", getReservationsByDate)
 router.get("/futureReservations", getFutureReservations)
@@ -25,6 +25,7 @@ router.delete("/deleteReservation/:id", deleteReservation)
 //
 
 router.get('/', getHalls)
+router.get('/get/hallsNameAndId', getHallsNotAllData)
 router.get('/:id', getHallById)
 
 router.put('/:id', upload.none(), updateHall)

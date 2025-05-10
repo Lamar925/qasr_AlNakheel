@@ -2,8 +2,6 @@ import { createRequire } from "module";
 import { Op } from "sequelize";
 const require = createRequire(import.meta.url);
 
-const Sequelize = require("../../config/dbConnection");
-
 const Hall = require("../../models/Hall.model");
 const HallReservation = require("../../models/HallReservation.model");
 const Customer = require("../../models/Customer.model");
@@ -14,7 +12,7 @@ const getLanguage = (req) => (req.headers["accept-language"] === "ar" ? "ar" : "
 export const createHallReservation = async (req, res) => {
     const lang = getLanguage(req);
     const cust_id = req.params.id;
-    const { hall_id, start_time, end_time } = req.body;
+    const { hall_id, start_time, end_time, details } = req.body;
 
     const startDate = new Date(start_time);
     const endDate = new Date(end_time);
@@ -65,6 +63,7 @@ export const createHallReservation = async (req, res) => {
         hall_id,
         start_time,
         end_time,
+        details,
         total_price: totalPrice,
     });
 
@@ -74,17 +73,74 @@ export const createHallReservation = async (req, res) => {
 
 export const getAllReservations = async (req, res) => {
     const lang = getLanguage(req);
-    const reservations = await HallReservation.findAll({
-        include: [{
-            model: Hall,
-            attributes: ["name", "capacity", "price_per_hour"]
-        }, {
-            model: Customer,
-            attributes: ["id", "first_name", "last_name"]
-        }],
+    const {
+        hall_id,
+        status,
+        payed,
+        start_time,
+        end_time,
+        limit = 10,
+        page = 1,
+    } = req.query;
+
+    const offset = (parseInt(page) - 1) * parseInt(limit);
+
+    const whereCondition = {};
+
+    if (hall_id) {
+        whereCondition.hall_id = hall_id;
+    }
+
+    if (status) {
+        whereCondition.status = status;
+    }
+
+    if (payed !== undefined) {
+        whereCondition.payed = payed === "true";
+    }
+
+    if (start_time && end_time) {
+        whereCondition.start_time = {
+            [Op.between]: [new Date(start_time), new Date(end_time)],
+        };
+    } else if (start_time) {
+        // جلب الحجوزات التي تبدأ في نفس اليوم فقط
+        const date = new Date(start_time);
+        const startOfDay = new Date(date.setHours(0, 0, 0, 0));
+        const endOfDay = new Date(date.setHours(23, 59, 59, 999));
+
+        whereCondition.start_time = {
+            [Op.between]: [startOfDay, endOfDay],
+        };
+    }
+
+    const reservations = await HallReservation.findAndCountAll({
+        where: whereCondition,
+        limit: parseInt(limit),
+        offset,
         order: [["start_time", "ASC"]],
+        include: [
+            {
+                model: Hall,
+                attributes: ["id", "name", "price_per_hour"]
+            },
+            {
+                model: Customer,
+                attributes: ["id", "first_name", "last_name"]
+            }
+        ]
     });
-    res.status(200).json({ reservations });
+
+    if (!reservations.rows.length) {
+        return res.status(404).json({ message: getMessage("noReservationsFound", lang) });
+    }
+
+    return res.status(200).json({
+        total: reservations.count,
+        page: parseInt(page),
+        limit: parseInt(limit),
+        data: reservations.rows
+    });
 }
 
 export const getCustomerReservations = async (req, res) => {
@@ -101,6 +157,42 @@ export const getCustomerReservations = async (req, res) => {
     });
 
     res.status(200).json({ reservations });
+};
+
+export const getCustomerHallReservations = async (req, res) => {
+    const lang = getLanguage(req);
+    const cust_id = req.params.id;
+    const { status } = req.query;
+
+    const limit = parseInt(req.query.limit) || 10;
+    const page = parseInt(req.query.page) || 1;
+    const offset = (page - 1) * limit;
+
+    const whereCondition = { cust_id };
+    if (status) {
+        whereCondition.status = status;
+    }
+
+    const count = await HallReservation.count({ where: whereCondition });
+
+    const reservations = await HallReservation.findAll({
+        where: whereCondition,
+        limit,
+        offset,
+        order: [["start_time", "ASC"]],
+        include: [
+            {
+                model: Hall,
+                attributes: ["name", "price_per_hour"]
+            }
+        ]
+    });
+
+    if (!reservations.length) {
+        return res.status(404).json({ message: getMessage("noReservationsFound", lang) });
+    }
+
+    res.status(200).json({ count, reservations });
 };
 
 export const cancelReservation = async (req, res) => {

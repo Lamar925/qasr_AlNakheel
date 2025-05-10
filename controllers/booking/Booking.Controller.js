@@ -234,44 +234,57 @@ export const createBookingByRoomId = async (req, res) => {
 
     return res.status(201).json({ message: getMessage("bookingDone", lang), booking: newBooking });
 };
+
 export const getAllBookings = async (req, res) => {
-    try {
-        const lang = getLanguage(req);
-        const { status } = req.query;
+    const lang = getLanguage(req);
+    const { status, payed, startDate, endDate } = req.query;
 
-        const limit = parseInt(req.query.limit) || 10;
-        const page = parseInt(req.query.page) || 1;
-        const offset = (page - 1) * limit;
+    const limit = parseInt(req.query.limit) || 10;
+    const page = parseInt(req.query.page) || 1;
+    const offset = (page - 1) * limit;
 
-        const whereCondition = {};
-        if (status) {
-            whereCondition.status = status;
-        }
+    const whereCondition = {};
 
-        const bookings = await Booking.findAndCountAll({
-            where: whereCondition,
-            limit,
-            offset,
-            order: [["check_in_date", "DESC"]],
-            include: [
-                {
-                    model: Room,
-                },
-                {
-                    model: Customer,
-                    attributes: ["id", "first_name", "last_name", "email"],
-                },
-            ],
-        });
-
-        if (!bookings.rows.length) {
-            return res.status(404).json({ message: getMessage("noBookingsFound", lang) });
-        }
-
-        res.status(200).json(bookings);
-    } catch (error) {
-        res.status(500).json({ message: "Server error", error: error.message });
+    if (status) {
+        whereCondition.status = status;
     }
+
+    if (payed !== undefined) {
+        whereCondition.payed = payed === "true";
+    }
+
+    if (startDate && endDate) {
+        whereCondition.check_in_date = {
+            [Op.between]: [new Date(startDate), new Date(endDate)],
+        };
+    } else if (startDate) {
+        whereCondition.check_in_date = {
+            [Op.gte]: new Date(startDate),
+        };
+    }
+
+    const bookings = await Booking.findAndCountAll({
+        where: whereCondition,
+        limit,
+        offset,
+        order: [["check_in_date", "DESC"]],
+        include: [
+            {
+                model: Room,
+                attributes: ["id", "room_no"]
+            },
+            {
+                model: Customer,
+                attributes: ["id", "first_name", "last_name", "email"],
+            },
+        ],
+    });
+
+    if (!bookings.rows.length) {
+        return res.status(404).json({ message: getMessage("noBookingsFound", lang) });
+    }
+
+    res.status(200).json(bookings);
 };
 
 
@@ -333,6 +346,7 @@ export const getBookingsByCustomer = async (req, res) => {
         order: [["check_in_date", "DESC"]],
         include: [{
             model: Room,
+            attributes: ["id", "room_no"]
         }]
     });
 

@@ -129,7 +129,12 @@ const messages = {
         mobileExists: "Mobile number is already exists",
         noPasswordSet: "Your account was created using Google or Facebook. Please use the same provider to log in or reset your password.",
         roomInactive: "Room inactive now",
-        priceNotFound:"Room price not found"
+        priceNotFound: "Room price not found",
+        profileUpdated: "Your profile updated successfully",
+        customerDeleted: "Customer Account deleted",
+        noReservationsFound: "Can't find Reservations",
+        userBanned: "User has been banned.",
+        userUnbanned: "User has been unbanned."
     },
     ar: {
         emailExists: "البريد الإلكتروني موجود بالفعل",
@@ -181,7 +186,7 @@ const messages = {
         invalidDates: "خطأ في التاريخ",
         specialPriceExists: "هناك سعر خاص مسبق في هذا التاريخ",
         specialPriceNotFound: "لا يوجد عروض خاصة",
-        priceNotFound:"لم نجد اسعار الغرفة",
+        priceNotFound: "لم نجد اسعار الغرفة",
         bookingDone: "تم حجز الغرفة بنجاح",
         fixedPriceNotFound: "لا يوجد سعر محدد ليوم ",
         roomPriceNotFound: "لم يتم العثور على أسعار للغرفة",
@@ -261,7 +266,12 @@ const messages = {
         noPaymentsFound: "لم يتم العثور على أي مدفوعات",
         mobileExists: "رقم الهاتف المسجل موجود بالفعل",
         noPasswordSet: "تم إنشاء حسابك باستخدام Google أو Facebook. يرجى استخدام نفس المزود لتسجيل الدخول أو إعادة تعيين كلمة المرور.",
-        roomInactive: "الغرفة غير متاحة حاليا"
+        roomInactive: "الغرفة غير متاحة حاليا",
+        profileUpdated: "تم تحديث بيانات حسابك",
+        customerDeleted: "تم حذف حساب زبون",
+        noReservationsFound: "لم يعثر على حجوزات",
+        userBanned: "تم حظر المستخدم.",
+        userUnbanned: "تم إلغاء حظر المستخدم."
     }
 };
 

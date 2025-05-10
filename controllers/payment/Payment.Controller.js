@@ -3,10 +3,6 @@ import { createRequire } from "module";
 import { Op } from "sequelize";
 const require = createRequire(import.meta.url);
 
-//require('dotenv').config();
-//import Stripe from 'stripe';
-//const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
-
 const { getMessage } = require('../language/messages');
 
 const Booking = require("../../models/Booking.model");
@@ -210,107 +206,6 @@ export const payInvoices = async (req, res) => {
         totalPaid: totalPaymentAmount
     });
 };
-/*
-export const payInvoices = async (req, res) => {
-    const lang = getLanguage(req);
-    const { cust_id, invoices, payment_method, token } = req.body;
-
-    if (!cust_id || !Array.isArray(invoices) || invoices.length === 0 || !token) {
-        return res.status(400).json({ message: getMessage("invalidData", lang) });
-    }
-
-    const customer = await Customer.findByPk(cust_id);
-    if (!customer) {
-        return res.status(404).json({ message: getMessage("customerNotFound", lang) });
-    }
-
-    let totalPaymentAmount = 0;
-
-    for (const invoice of invoices) {
-        const { invoice_id, invoice_type, amount } = invoice;
-        const numericAmount = Number(amount);
-
-        if (!Number.isFinite(numericAmount) || numericAmount <= 0) {
-            return res.status(400).json({ message: getMessage("invalidAmount", lang) });
-        }
-
-        totalPaymentAmount += numericAmount;
-
-        let invoiceRecord;
-        switch (invoice_type) {
-            case "Booking":
-                invoiceRecord = await Booking.findOne({ where: { id: invoice_id, cust_id } });
-                break;
-            case "CustomerPool":
-                invoiceRecord = await CustomerPool.findOne({ where: { id: invoice_id, customer_id: cust_id } });
-                break;
-            case "CustomerRestaurant":
-                invoiceRecord = await CustomerRestaurant.findOne({ where: { id: invoice_id, cust_id } });
-                break;
-            case "HallReservation":
-                invoiceRecord = await HallReservation.findOne({ where: { id: invoice_id, cust_id } });
-                break;
-            default:
-                return res.status(400).json({ message: getMessage("invalidInvoiceType", lang) });
-        }
-
-        if (!invoiceRecord) {
-            return res.status(404).json({ message: getMessage("invoiceNotFound", lang) });
-        }
-
-        if (invoiceRecord.payed) {
-            return res.status(400).json({ message: getMessage("invoiceAlreadyPaid", lang) });
-        }
-    }
-
-    try {
-        // معالجة الدفع عبر Stripe
-        const charge = await stripe.charges.create({
-            amount: Math.round(totalPaymentAmount * 100), // تحويل القيمة إلى سنتات
-            currency: 'usd',
-            source: token,
-            description: 'Payment for Multiple Invoices',
-        });
-
-        // تحديث حالة الفواتير بعد نجاح الدفع
-        for (const invoice of invoices) {
-            const { invoice_id, invoice_type } = invoice;
-
-            switch (invoice_type) {
-                case "Booking":
-                    await Booking.update({ payed: true }, { where: { id: invoice_id, cust_id } });
-                    break;
-                case "CustomerPool":
-                    await CustomerPool.update({ payed: true }, { where: { id: invoice_id, customer_id: cust_id } });
-                    break;
-                case "CustomerRestaurant":
-                    await CustomerRestaurant.update({ payed: true }, { where: { id: invoice_id, cust_id } });
-                    break;
-                case "HallReservation":
-                    await HallReservation.update({ payed: true }, { where: { id: invoice_id, cust_id } });
-                    break;
-            }
-
-            // حفظ معلومات الدفع في قاعدة البيانات
-            await Payment.create({
-                cust_id,
-                payment_amount: totalPaymentAmount,
-                payment_method,
-                invoice_id,
-                invoice_type
-            });
-        }
-
-        res.status(200).json({
-            message: getMessage("paymentSuccess", lang),
-            totalPaid: totalPaymentAmount,
-            charge
-        });
-    } catch (error) {
-        res.status(500).json({ message: getMessage("paymentFailed", lang), error: error.message });
-    }
-};
-*/
 
 export const getTotalUnpaidInvoiceAmount = async (req, res) => {
     const lang = getLanguage(req);

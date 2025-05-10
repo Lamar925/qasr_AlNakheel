@@ -78,6 +78,37 @@ export const getReservationsByCustomerId = async (req, res) => {
     res.status(200).json(reservations);
 };
 
+export const getRestaurantReservationsByCustomer = async (req, res) => {
+    const lang = getLanguage(req);
+    const cust_id = req.params.id;
+    const { status } = req.query;
+
+    const limit = parseInt(req.query.limit) || 10;
+    const page = parseInt(req.query.page) || 1;
+    const offset = (page - 1) * limit;
+
+    const whereCondition = { cust_id };
+    if (status) {
+        whereCondition.status = status;
+    }
+
+    const count = await CustomerRestaurant.count({ where: whereCondition });
+
+    const reservations = await CustomerRestaurant.findAll({
+        where: whereCondition,
+        limit,
+        offset,
+        order: [["reservation_date", "DESC"]],
+        include: [{ model: Restaurant, attributes: ["id", "name", "Opening_hours"] }]
+    });
+
+    if (!reservations.length) {
+        return res.status(404).json({ message: getMessage("noReservationsFound", lang) });
+    }
+
+    res.status(200).json({ count, reservations });
+};
+
 export const getReservationsByRestaurant = async (req, res) => {
     const lang = getLanguage(req);
     const rest_id = req.params.id;
@@ -167,4 +198,75 @@ export const getReservationsByDate = async (req, res) => {
     });
 
     res.status(200).json({ reservations });
+};
+
+export const getAllRestaurantReservations = async (req, res) => {
+    const lang = getLanguage(req);
+    const {
+        rest_id,
+        status,
+        payed,
+        reservation_date,
+        start_time,
+        end_time,
+        limit = 10,
+        page = 1,
+    } = req.query;
+
+    const offset = (parseInt(page) - 1) * parseInt(limit);
+    const whereCondition = {};
+
+    if (rest_id) {
+        whereCondition.rest_id = rest_id;
+    }
+
+    if (status) {
+        whereCondition.status = status;
+    }
+
+    if (payed !== undefined) {
+        whereCondition.payed = payed === "true";
+    }
+
+    // الفلترة بالتاريخ الكامل أو حسب يوم واحد
+    if (start_time && end_time) {
+        whereCondition.reservation_date = {
+            [Op.between]: [new Date(start_time), new Date(end_time)],
+        };
+    } else if (reservation_date) {
+        const date = new Date(reservation_date);
+        const startOfDay = new Date(date.setHours(0, 0, 0, 0));
+        const endOfDay = new Date(date.setHours(23, 59, 59, 999));
+        whereCondition.reservation_date = {
+            [Op.between]: [startOfDay, endOfDay],
+        };
+    }
+
+    const reservations = await CustomerRestaurant.findAndCountAll({
+        where: whereCondition,
+        limit: parseInt(limit),
+        offset,
+        order: [["reservation_date", "ASC"]],
+        include: [
+            {
+                model: Restaurant,
+                attributes: ["id", "name"]
+            },
+            {
+                model: Customer,
+                attributes: ["id", "first_name", "last_name"]
+            }
+        ]
+    });
+
+    if (!reservations.rows.length) {
+        return res.status(404).json({ message: getMessage("noReservationsFound", lang) });
+    }
+
+    return res.status(200).json({
+        total: reservations.count,
+        page: parseInt(page),
+        limit: parseInt(limit),
+        data: reservations.rows
+    });
 };

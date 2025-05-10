@@ -1,5 +1,5 @@
 const express = require('express');
-const { roomRating, getCustomerById, poolRating, hallRating, deleteCustomer, getAllCustomers, restaurantRating, updateCustomerProfile, changePassword } = require('./Customer.Controller');
+const { roomRating, getCustomerById, poolRating, hallRating, deleteCustomer, getAllCustomers, restaurantRating, updateCustomerProfile, changePassword, banUser } = require('./Customer.Controller');
 const { uploadprofilePicturesImage } = require('../../config/multerConfig');
 const router = express.Router();
 
@@ -16,6 +16,7 @@ router.get("/", getAllCustomers)
 
 router.put('/update/:id', uploadprofilePicturesImage, updateCustomerProfile)
 router.patch('/update/changePassword/:id', changePassword)
+router.patch('/banUser/:id', banUser)
 
 router.delete('/:id', deleteCustomer)
 

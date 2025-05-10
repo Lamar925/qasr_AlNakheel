@@ -3,23 +3,28 @@ const { uploadFacilityImages, uploadPoolImages, uploadMorePoolImage } = require(
 const router = express.Router();
 
 const multer = require("multer");
-const { createPool, getPools, getPoolById, updatePool, addPoolImage, updateMainImage, addFacility, updateFacility, deleteFacility, deletePoolImage, deletePool } = require('./Pool.Controller');
-const { createPoolReservation, getReservationsByCustomerId, getReservationsByPoolId, getReservationsByTime, checkIn, checkOut } = require('./PoolReservation.Controller');
+const { createPool, getPools, getPoolById, updatePool, addPoolImage, updateMainImage, addFacility, updateFacility, deleteFacility, deletePoolImage, deletePool, getPoolsName } = require('./Pool.Controller');
+const { createPoolReservation, getReservationsByPoolId, getReservationsByTime, checkIn, checkOut, getPoolReservationsByCustomer, cancelReservation, getAllPoolReservations, deletePoolReservation } = require('./PoolReservation.Controller');
 const upload = multer();
 
 router.post("/", uploadPoolImages, createPool)
-router.post('/addPoolImage/:id', addPoolImage, addPoolImage)
+router.post('/addPoolImage/:id', uploadMorePoolImage, addPoolImage)
 router.post("/addFacility/:id", uploadFacilityImages, addFacility)
 
 //pool reservation
 router.post('/createPoolReservation/:id', createPoolReservation)
-router.get('/getPoolReservationByCustomerId/:id', getReservationsByCustomerId)
+router.get('/get/AllPoolReservations', getAllPoolReservations)
+router.get('/getPoolReservationByCustomerId/:id', getPoolReservationsByCustomer)
 router.get('/getPoolReservationByPoolId/:id', getReservationsByPoolId)
 router.get('/getReservationsByTime', getReservationsByTime)
 router.patch('/checkIn/:id', checkIn)
 router.patch('/checkOut/:id', checkOut)
+router.patch('/cancelPoolReservation/:id', cancelReservation)
+router.delete('/deleteReservation/:id', deletePoolReservation)
+
 
 router.get('/', getPools)
+router.get('/get/PoolsName', getPoolsName)
 router.get('/:id', getPoolById)
 
 router.put('/:id', upload.none(), updatePool)

@@ -199,7 +199,7 @@ export const changePassword = async (req, res) => {
 export const updateEmployee = async (req, res) => {
     const lang = getLanguage(req);
     const employee_id = req.params.id;
-    const { first_name, last_name, email, address, salary, hire_date, mobileNo } = req.body;
+    const { first_name, last_name, email, address, salary,  mobileNo } = req.body;
 
     const transaction = await Employee.sequelize.transaction();
 
@@ -222,7 +222,6 @@ export const updateEmployee = async (req, res) => {
             email: email ?? employee.email,
             address: address ?? employee.address,
             salary: salary ?? employee.salary,
-            hire_date: hire_date ?? employee.hire_date,
         },
         { transaction }
     );

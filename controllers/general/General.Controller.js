@@ -206,3 +206,59 @@ export const getAboutStatistics = async (req, res) => {
 
     res.status(200).json(data);
 }
+
+
+export const getSomeDataForUser = async (req, res) => {
+    const id = req.params.id;
+
+    const Bookings = await Booking.count({ where: { cust_id: id } });
+    const restaurantReservations = await CustomerRestaurant.count({ where: { cust_id: id } });
+    const hallReservations = await HallReservation.count({ where: { cust_id: id } });
+    const poolReservations = await CustomerPool.count({ where: { customer_id: id } });
+
+    const data = [
+        {
+            title: { ar: "حجوزات الغرف", en: "Room Bookings" },
+            value: Bookings
+        },
+        {
+            title: { ar: "زيارات المطعم", en: "Restaurant Visits" },
+            value: restaurantReservations
+        },
+        {
+            title: { ar: "حجوزات القاعات", en: "Hall Reservations" },
+            value: hallReservations
+        },
+        {
+            title: { ar: "حجوزات المسبح", en: "Pool Reservations" },
+            value: poolReservations
+        }
+    ];
+
+    res.status(200).json(data);
+}
+
+
+
+export const getAllworkPlaces = async (req, res) => {
+    const [pools, restaurants, halls] = await Promise.all([
+        Pool.findAll({
+            attributes: ['id', 'name']
+        }),
+        Restaurant.findAll({
+            attributes: ['id', 'name']
+        }),
+        Hall.findAll({
+            attributes: ['id', 'name']
+        })
+    ]);
+
+    res.status(200).json({
+        success: true,
+        data: {
+            pools,
+            restaurants,
+            halls
+        }
+    });
+}

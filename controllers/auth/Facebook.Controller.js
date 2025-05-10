@@ -1,4 +1,4 @@
-require('dotenv').config();
+require("dotenv").config();
 const passport = require("passport");
 const { Strategy: FacebookStrategy } = require("passport-facebook");
 const express = require("express");

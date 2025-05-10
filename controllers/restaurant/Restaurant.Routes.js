@@ -4,7 +4,7 @@ const router = express.Router();
 const multer = require("multer");
 const { createRestaurant, getRestaurants, getRestaurantById, updateRestaurant, addRestaurantImage, updateMainImage, deleteRestaurantImage, deleteRestaurant } = require('./Restaurant.Controller');
 const { uploadRestaurantImages, uploadMoreRestaurantImage } = require('../../config/multerConfig');
-const { createRestaurantReservation, getReservationsByRestaurant, getReservationsByDate, deleteReservation, getFutureReservations, acceptRestaurantReservation } = require('./RestaurantReservation.Controller');
+const { createRestaurantReservation, getReservationsByRestaurant, getReservationsByDate, deleteReservation, getFutureReservations, acceptRestaurantReservation, getRestaurantReservationsByCustomer, cancelRestaurantReservation, getAllRestaurantReservations } = require('./RestaurantReservation.Controller');
 const upload = multer();
 
 router.post('/', uploadRestaurantImages, createRestaurant);
@@ -13,10 +13,13 @@ router.post('/addRestaurantImage/:id', uploadMoreRestaurantImage, addRestaurantI
 
 //RestaurantReservation
 router.post("/createRestaurantReservation/:id", createRestaurantReservation);
+router.get("/get/allReservationWithFilter", getAllRestaurantReservations)
 router.get("/reservationsByRestaurant/:id", getReservationsByRestaurant);
+router.get("/get/ReservationsCustomer/:id", getRestaurantReservationsByCustomer)
 router.get("/reservations/date/:date", getReservationsByDate);
 router.get("/reservations/future", getFutureReservations);
 router.patch("/acceptReservation/:id", acceptRestaurantReservation);
+router.patch("/cancelRestaurantReservation/:id", cancelRestaurantReservation)
 router.delete("/reservation/:id", deleteReservation);
 //
 

@@ -1,18 +1,15 @@
 import { createRequire } from "module";
+import { col, fn, Op } from "sequelize";
 const require = createRequire(import.meta.url);
 
-const fs = require("fs");
-import { fileURLToPath } from "url";
 import { deleteImageFromCloudinary } from "../../config/helpers/cloudinary.mjs";
 
-const path = require("path");
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 
 const Sequelize = require("../../config/dbConnection");
 const HallImages = require("../../models/HallImages.model");
 const Hall = require("../../models/Hall.model");
 const HallFacilities = require("../../models/HallFacilities.model");
+const Rating = require("../../models/Rating.model");
 
 const { getMessage } = require("../language/messages");
 const getLanguage = (req) => (req.headers["accept-language"] === "ar" ? "ar" : "en");
@@ -34,6 +31,7 @@ export const createHall = async (req, res) => {
         suitable_for_en,
         type
     } = req.body;
+    console.log(req.files)
     if (
         !name_ar || !name_en ||
         !capacity || !price_per_hour ||
@@ -89,7 +87,6 @@ export const getHalls = async (req, res) => {
     const { page = 1, limit = 10, hallType } = req.query;
     const offset = (page - 1) * limit;
 
-    
     const where = {};
     if (hallType) {
         where.type = hallType;
@@ -112,7 +109,7 @@ export const getHalls = async (req, res) => {
                 model: HallImages,
                 as: "images",
                 attributes: ["id", "image_name_url", "main"],
-            },
+            }
         ],
     });
 
@@ -120,9 +117,51 @@ export const getHalls = async (req, res) => {
         return res.status(404).json({ success: false, message: getMessage('hallsNotFound', lang) });
     }
 
-    res.status(200).json({ halls, totalCount: hallsCount });
+    // بعد جلب القاعات نجيب التقييمات الخاصة بهم
+    const hallIds = halls.map(hall => hall.id);
+
+    const ratings = await Rating.findAll({
+        where: {
+            hall_id: {
+                [Op.in]: hallIds
+            }
+        },
+        attributes: [
+            "hall_id",
+            [fn("AVG", col("rating")), "averageRating"],
+            [fn("COUNT", col("id")), "ratingCount"]
+        ],
+        group: ["hall_id"]
+    });
+
+    // نحول النتائج إلى شكل يسهل ربطه
+    const ratingsMap = {};
+    ratings.forEach(rating => {
+        ratingsMap[rating.hall_id] = {
+            averageRating: parseFloat(rating.get("averageRating")).toFixed(1),
+            ratingCount: parseInt(rating.get("ratingCount"))
+        };
+    });
+
+    // نضيف لكل قاعة تقييمها
+    const hallsWithRatings = halls.map(hall => {
+        const ratingData = ratingsMap[hall.id] || { averageRating: 0, ratingCount: 0 };
+        return {
+            ...hall.toJSON(),
+            averageRating: ratingData.averageRating,
+            ratingCount: ratingData.ratingCount
+        };
+    });
+
+    res.status(200).json({ halls: hallsWithRatings, totalCount: hallsCount });
 };
 
+export const getHallsNotAllData = async (req, res) => {
+    const halls = await Hall.findAll({
+        attributes: ["id", "name"]
+    });
+    res.status(200).json(halls);
+};
 
 export const getHallById = async (req, res) => {
     const lang = getLanguage(req);

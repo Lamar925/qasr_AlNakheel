@@ -89,7 +89,7 @@ export const logIn = async (req, res) => {
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) return res.status(400).json({ message: getMessage("wrongPassword", lang) });
 
-    const accessToken = jwt.sign({ id: user.id, role: 'user', is_verified: user.is_verified }, process.env.JWT_ACCESS_SECRET, { expiresIn: '7d' });
+    const accessToken = jwt.sign({ id: user.id, role: 'user', banned: user.banned, is_verified: user.is_verified }, process.env.JWT_ACCESS_SECRET, { expiresIn: '7d' });
 
     res.cookie("QasrAlNakheel", accessToken, {
         httpOnly: true,
@@ -111,6 +111,7 @@ export const logIn = async (req, res) => {
             postal_code: user.postal_code,
             birthdate: user.birthdate,
             role: 'user',
+            banned: user.banned,
             is_verified: user.is_verified,
             profile_picture: user.profile_picture,
             mobileNos: mobileNos
@@ -145,6 +146,7 @@ export const getUserData = async (req, res) => {
                 postal_code: user.postal_code,
                 birthdate: user.birthdate,
                 role: user.role || 'user',
+                banned: user.banned,
                 is_verified: user.is_verified,
                 profile_picture: user.profile_picture,
                 mobileNos: mobileNos
@@ -175,7 +177,6 @@ export const getUserData = async (req, res) => {
             }
         });
     }
-
     return res.status(404).json({ message: getMessage("userNotFound", lang) });
 };
 
