@@ -38,6 +38,7 @@ export const getCustomerMessages = async (req, res) => {
     }
 
     let whereCondition = { cust_id };
+    whereCondition.is_deleted = false;
     if (status && (status === 'read' || status === 'unread')) {
         whereCondition.status = status;
     }
@@ -64,6 +65,7 @@ export const getAllContacts = async (req, res) => {
     const status = req.query.status;
 
     let whereCondition = {};
+    whereCondition.is_deleted = false;
     if (status && (status === 'read' || status === 'unread')) {
         whereCondition.status = status;
     }
@@ -110,7 +112,8 @@ export const deleteCustomerMessage = async (req, res) => {
         return res.status(404).json({ message: getMessage("messageNotFound", lang) })
     }
 
-    await message.destroy()
+    message.is_deleted = true;
+    await message.save()
     res.status(200).json({ message: getMessage("messageDeleted", lang) })
 
 }

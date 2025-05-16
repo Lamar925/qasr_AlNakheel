@@ -77,9 +77,12 @@ router.get("/google/callback", passport.authenticate("google", { failureRedirect
     if (!req.user) {
         return res.redirect(`${process.env.FRONTEND_URL}/login` || "http://localhost:5173/login");
     }
+    if(req.user.is_deleted){
+        return res.redirect(`${process.env.FRONTEND_URL}/login` || "http://localhost:5173/login");
+    }
 
     const accessToken = jwt.sign(
-        { id: req.user.id, role: "user", is_verified: req.user.is_verified },
+        { id: req.user.id, role: "user", banned: req.user.banned, is_verified: req.user.is_verified },
         process.env.JWT_ACCESS_SECRET,
         { expiresIn: "7d" }
     );

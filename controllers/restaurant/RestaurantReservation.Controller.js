@@ -74,7 +74,7 @@ export const cancelRestaurantReservation = async (req, res) => {
 
 export const getReservationsByCustomerId = async (req, res) => {
     const cust_id = req.params.id;
-    const reservations = await CustomerRestaurant.findAll({ where: { cust_id } });
+    const reservations = await CustomerRestaurant.findAll({ where: { cust_id, is_deleted: false } });
     res.status(200).json(reservations);
 };
 
@@ -88,6 +88,8 @@ export const getRestaurantReservationsByCustomer = async (req, res) => {
     const offset = (page - 1) * limit;
 
     const whereCondition = { cust_id };
+    whereCondition.is_deleted = false;
+
     if (status) {
         whereCondition.status = status;
     }
@@ -114,7 +116,7 @@ export const getReservationsByRestaurant = async (req, res) => {
     const rest_id = req.params.id;
 
     const reservations = await CustomerRestaurant.findAll({
-        where: { rest_id },
+        where: { rest_id, is_deleted: false },
         include: [{ model: Customer, attributes: ["id", "first_name", "last_name"] }],
         order: [["reservation_date", "ASC"]],
     });
@@ -126,6 +128,7 @@ export const getReservationsByRestaurant = async (req, res) => {
 export const getReservationsByTime = async (req, res) => {
     const { date, after, before } = req.query;
     let whereClause = {};
+    whereClause.is_deleted = false;
 
     if (date) {
         whereClause.reservation_date = {
@@ -165,7 +168,8 @@ export const deleteReservation = async (req, res) => {
         return res.status(404).json({ message: getMessage("reservationNotFound", lang) });
     }
 
-    await reservation.destroy();
+    reservation.is_deleted = true;
+    await reservation.save();
     res.status(200).json({ message: getMessage("reservationDeleted", lang) });
 };
 
@@ -173,6 +177,7 @@ export const getFutureReservations = async (req, res) => {
     const reservations = await CustomerRestaurant.findAll({
         where: {
             reservation_date: { [Op.gt]: new Date() },
+            is_deleted: false,
         },
     });
 
@@ -191,6 +196,7 @@ export const getReservationsByDate = async (req, res) => {
 
     const reservations = await CustomerRestaurant.findAll({
         where: {
+            is_deleted: false,
             reservation_date: {
                 [Op.between]: [startOfDay, endOfDay],
             },
@@ -215,6 +221,7 @@ export const getAllRestaurantReservations = async (req, res) => {
 
     const offset = (parseInt(page) - 1) * parseInt(limit);
     const whereCondition = {};
+    whereCondition.is_deleted = false;
 
     if (rest_id) {
         whereCondition.rest_id = rest_id;

@@ -23,7 +23,19 @@ export const getCustomerById = async (req, res) => {
     const lang = getLanguage(req);
     const { id } = req.params;
     const customer = await Customer.findOne({
-        where: { id },
+        where: { id: id, is_deleted: false },
+        attributes: {
+            id: true,
+            first_name: true,
+            last_name: true,
+            email: true,
+            country: true,
+            city: true,
+            postal_code: true,
+            birthdate: true,
+            profile_picture: true,
+            banned: true,
+        },
         include: [
             { model: Booking },
             { model: CustomerMobile },
@@ -76,7 +88,6 @@ export const getAllCustomers = async (req, res) => {
     if (city) {
         whereClause.city = { [Op.iLike]: `%${city}%` };
     }
-
     const { rows, count } = await Customer.findAndCountAll({
         where: whereClause,
         include: [
@@ -176,7 +187,7 @@ export const roomRating = async (req, res) => {
     const lang = getLanguage(req);
     const customer_id = req.params.id;
     const { room_id, rating, comment } = req.body;
-    console.log({ room_id, rating, comment })
+    
     const customer = await Customer.findByPk(customer_id);
     if (!customer) {
         return res.status(404).json({ message: getMessage("customerNotFound", lang) });
@@ -280,6 +291,7 @@ export const deleteCustomer = async (req, res) => {
         await deleteImageFromCloudinary(customer.profile_picture);
     }
 
-    await Customer.destroy({ where: { id } });
+    customer.is_deleted = true;
+    await customer.save();
     res.status(204).json({ message: getMessage("customerDeleted", lang) });
 }

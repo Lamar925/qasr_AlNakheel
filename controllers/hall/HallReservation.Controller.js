@@ -45,6 +45,7 @@ export const createHallReservation = async (req, res) => {
         where: {
             hall_id,
             status: { [Op.not]: "cancelled" },
+            is_deleted: false,
             [Op.or]: [
                 { start_time: { [Op.lt]: endDate }, end_time: { [Op.gt]: startDate } },
             ],
@@ -147,7 +148,7 @@ export const getCustomerReservations = async (req, res) => {
     const cust_id = req.params.id;
 
     const reservations = await HallReservation.findAll({
-        where: { cust_id },
+        where: { cust_id, is_deleted: false },
         include: [{ model: Hall, attributes: ["name", "capacity", "price_per_hour"] },
         {
             model: Customer,
@@ -230,7 +231,7 @@ export const getReservationsByHall = async (req, res) => {
     const hall_id = req.params.id;
 
     const reservations = await HallReservation.findAll({
-        where: { hall_id },
+        where: { hall_id, is_deleted: false },
         include: [{ model: Customer, attributes: ["id", "first_name", "last_name"] }],
         order: [["start_time", "ASC"]],
     });
@@ -248,6 +249,7 @@ export const getReservationsByHallAndDate = async (req, res) => {
         const reservations = await HallReservation.findAll({
             where: {
                 hall_id,
+                is_deleted: false,
                 start_time: { [Op.gte]: startOfDay },
                 end_time: { [Op.lte]: endOfDay },
             },
@@ -274,6 +276,7 @@ export const getReservationsByDate = async (req, res) => {
 
     const reservations = await HallReservation.findAll({
         where: {
+            is_deleted: false,
             start_time: {
                 [Op.between]: [startOfDay, endOfDay],
             },
@@ -303,6 +306,7 @@ export const getFutureReservations = async (req, res) => {
 
     const reservations = await HallReservation.findAll({
         where: {
+            is_deleted: false,
             start_time: { [Op.gt]: new Date() },
         },
     });

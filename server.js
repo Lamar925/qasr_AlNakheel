@@ -32,6 +32,7 @@ const PORT = process.env.PORT || 3000;
 
 const whitelist = [
   process.env.FRONTEND_URL,
+  "https://qasr-alnakheel-frontend.vercel.app",
   "http://localhost:5173",
   "*"
 ];

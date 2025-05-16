@@ -61,6 +61,11 @@ const CustomerPool = sequelize.define("CustomerPool", {
     notes: {
         type: DataTypes.TEXT,
         allowNull: true,
+    },
+    is_deleted: {
+        type: DataTypes.BOOLEAN,
+        defaultValue: false,
+        allowNull: false,
     }
 }, { timestamps: false });
 

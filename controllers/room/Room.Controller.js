@@ -95,6 +95,7 @@ export const getAllRoomsNotAllData = async (req, res) => {
     const lang = getLanguage(req);
     const { page = 1, limit = 10, capacity, type } = req.query;
     const where = {};
+    where.is_deleted = false;
 
     if (capacity) {
         const parsedCapacity = parseInt(capacity, 10);
@@ -188,6 +189,7 @@ export const getAvailableRoomPerType = async (req, res) => {
             where: {
                 type: type.id,
                 isActive: true,
+                is_deleted: false,
             },
             include: [
                 {
@@ -259,6 +261,7 @@ export const getAllRooms = async (req, res) => {
     const lang = getLanguage(req);
     const { page = 1, limit = 10, capacity, type } = req.query;
     const where = {};
+    where.is_deleted = false;
 
     if (capacity) {
         const parsedCapacity = parseInt(capacity, 10);
@@ -355,7 +358,11 @@ export const getRoomById = async (req, res) => {
     const lang = getLanguage(req);
     const room_id = req.params.id;
 
-    const room = await Room.findByPk(room_id, {
+    const room = await Room.findOne({
+        where: {
+            id: room_id,
+            is_deleted: false
+        },
         include: [{
             model: RoomType,
             attributes: ["id", "name", "description"],
@@ -441,8 +448,6 @@ export const changeRoomActiveStatis = async (req, res,) => {
     });
 }
 
-
-
 export const updateRoom = async (req, res) => {
     const lang = getLanguage(req);
     const room_id = req.params.id;
@@ -520,7 +525,6 @@ export const updateMainImage = async (req, res) => {
     });
     res.status(200).json({ message: getMessage("updatedImage", lang) });
 }
-
 
 export const updateRoomPricing = async (req, res) => {
     const lang = getLanguage(req);
@@ -746,7 +750,8 @@ export const deleteRoom = async (req, res) => {
         return res.status(404).json({ message: getMessage("roomNotFound", lang) });
     }
 
-    await room.destroy();
+    room.is_deleted = true;
+    await room.save();
 
     res.status(200).json({ message: getMessage("roomDeleted", lang) });
 }
@@ -769,6 +774,7 @@ export const addRoomType = async (req, res) => {
 
 export const getRoomTypeForNavbar = async (req, res) => {
     const roomTypes = await RoomType.findAll({
+        where: { is_deleted: false },
         attributes: [
             "id",
             "name"
@@ -780,6 +786,7 @@ export const getRoomTypeForNavbar = async (req, res) => {
 
 export const getRoomTypes = async (req, res) => {
     const roomTypes = await RoomType.findAll({
+        where: { is_deleted: false },
         include: [
             {
                 model: Room,
@@ -803,7 +810,7 @@ export const getRoomTypeAndRoomsByTypeIdWithoutDate = async (req, res) => {
     const typeId = req.params.id;
 
     const roomType = await RoomType.findOne({
-        where: { id: typeId },
+        where: { id: typeId, is_deleted: false },
         include: [
             {
                 model: Room,
@@ -901,7 +908,7 @@ export const getRoomTypeAndRoomsByTypeId = async (req, res) => {
     }
 
     const roomType = await RoomType.findOne({
-        where: { id: typeId },
+        where: { id: typeId, is_deleted: false },
         include: [
             {
                 model: Room,
@@ -1001,6 +1008,7 @@ export const getAllRoomTypesWithRoomsWithoutDate = async (req, res) => {
     const lang = getLanguage(req);
 
     const roomTypes = await RoomType.findAll({
+        where: { is_deleted: false },
         include: [
             {
                 model: Room,
@@ -1086,6 +1094,7 @@ export const getAllRoomTypesWithAvailableRoomsByDate = async (req, res) => {
     }
 
     const roomTypes = await RoomType.findAll({
+        where: { is_deleted: false },
         include: [
             {
                 model: Room,
@@ -1182,7 +1191,7 @@ export const getAllRoomTypesWithAvailableRoomsByDate = async (req, res) => {
 export const getRoomTypeById = async (req, res) => {
     const lang = getLanguage(req);
     const { id } = req.params;
-    const roomType = await RoomType.findByPk(id);
+    const roomType = await RoomType.findOne({ where: { id: id, is_deleted: false } });
     if (!roomType) {
         return res.status(404).json({ message: getMessage("roomTypeNotFound", lang) });
     }
@@ -1214,10 +1223,10 @@ export const deleteRoomType = async (req, res) => {
     if (!roomType) {
         return res.status(404).json({ message: getMessage("roomTypeNotFound", lang) });
     }
-    await roomType.destroy();
+    roomType.is_deleted = true;
+    await roomType.save();
     res.status(200).json({ message: getMessage("roomTypeDeleted", lang) });
 }
-
 
 export const getRoomTypeImage = async (req, res) => {
     const lang = getLanguage(req);
@@ -1252,6 +1261,7 @@ export const getRoomsImage = async (req, res) => {
     const lang = getLanguage(req);
 
     const roomsWithImages = await Room.findAll({
+        where: { is_deleted: false },
         include: [
             {
                 model: RoomImage,

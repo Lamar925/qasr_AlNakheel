@@ -66,6 +66,7 @@ export const addEmployee = async (req, res) => {
 
 export const getAllEmployees = async (req, res) => {
     const employees = await Employee.findAll({
+        where: { is_deleted: false },
         attributes: ['id', 'first_name', 'last_name', 'email', 'address', 'jop_description', 'hire_date', 'salary', 'shift', 'status', 'role', 'hall_id', 'rest_id', 'pool_id'],
         include: {
             model: EmployeeMobile,
@@ -82,7 +83,7 @@ export const getEmployeeById = async (req, res) => {
     const employee_id = req.params.id;
 
     const employee = await Employee.findOne({
-        where: { id: employee_id },
+        where: { id: employee_id, is_deleted: false },
         attributes: ['id', 'first_name', 'last_name', 'email', 'address', 'jop_description', 'hire_date', 'salary', 'shift', 'status', 'role', 'hall_id', 'rest_id', 'pool_id'],
         include: [
             {
@@ -123,6 +124,7 @@ export const getEmployeeFilter = async (req, res) => {
     const skip = (page - 1) * limit;
 
     const filter = {};
+    filter.is_deleted = false;
 
     if (address) filter.address = { [Op.like]: `%${address}%` };
     if (jop) filter.jop_description = { [Op.like]: `%${jop}%` };
@@ -323,7 +325,8 @@ export const deleteEmployee = async (req, res) => {
         return res.status(404).json({ message: getMessage("employeeNotFound", lang) });
     }
 
-    await Employee.destroy({ where: { id: employee_id } });
+    employee.is_deleted = true;
+    await employee.save();
 
     res.status(200).json({ message: getMessage("employeeDeleted", lang) });
 }

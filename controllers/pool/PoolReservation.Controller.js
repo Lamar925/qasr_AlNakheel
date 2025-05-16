@@ -68,8 +68,8 @@ export const deletePoolReservation = async (req, res) => {
     if (!reservation) {
         return res.status(404).json({ message: getMessage("reservationNotFound", lang) });
     }
-    await reservation.destroy();
-
+    reservation.is_deleted = true;
+    await reservation.save();
     return res.status(200).json({ message: getMessage("reservationDeleted", lang) });
 };
 
@@ -147,6 +147,7 @@ export const getAllPoolReservations = async (req, res) => {
 
     const offset = (parseInt(page) - 1) * parseInt(limit);
     const whereCondition = {};
+    whereCondition.is_deleted = false;
 
     if (pool_id) {
         whereCondition.pool_id = pool_id;
@@ -205,7 +206,7 @@ export const getAllPoolReservations = async (req, res) => {
 
 export const getReservationsByCustomerId = async (req, res) => {
     const cust_id = req.params.id;
-    const reservations = await CustomerPool.findAll({ where: { customer_id: cust_id } });
+    const reservations = await CustomerPool.findAll({ where: { customer_id: cust_id, is_deleted: false } });
     res.status(200).json(reservations);
 };
 
@@ -219,6 +220,7 @@ export const getPoolReservationsByCustomer = async (req, res) => {
     const offset = (page - 1) * limit;
 
     const whereCondition = { customer_id: cust_id };
+    whereCondition.is_deleted = false;
     if (status) {
         whereCondition.status = status;
     }
@@ -242,13 +244,14 @@ export const getPoolReservationsByCustomer = async (req, res) => {
 
 export const getReservationsByPoolId = async (req, res) => {
     const pool_id = req.params.id;
-    const reservations = await CustomerPool.findAll({ where: { pool_id } });
+    const reservations = await CustomerPool.findAll({ where: { pool_id, is_deleted: false } });
     res.status(200).json(reservations);
 };
 
 export const getReservationsByTime = async (req, res) => {
     const { date, after, before } = req.query;
     let whereClause = {};
+    whereClause.is_deleted = false;
 
     if (date) {
         whereClause.start_time = {

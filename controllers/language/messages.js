@@ -134,7 +134,10 @@ const messages = {
         customerDeleted: "Customer Account deleted",
         noReservationsFound: "Can't find Reservations",
         userBanned: "User has been banned.",
-        userUnbanned: "User has been unbanned."
+        userUnbanned: "User has been unbanned.",
+        userDeleted:"This user is deleted.",
+        bannedUser:"User has been banned.",
+        employeeDeleted:"This employee account is deleted"
     },
     ar: {
         emailExists: "البريد الإلكتروني موجود بالفعل",
@@ -271,7 +274,10 @@ const messages = {
         customerDeleted: "تم حذف حساب زبون",
         noReservationsFound: "لم يعثر على حجوزات",
         userBanned: "تم حظر المستخدم.",
-        userUnbanned: "تم إلغاء حظر المستخدم."
+        userUnbanned: "تم إلغاء حظر المستخدم.",
+        userDeleted: "هذا المستخدم محذوف.",
+        bannedUser: "تم حظر المستخدم.",
+        employeeDeleted:"حساب هذا الموظف محذوف"
     }
 };
 

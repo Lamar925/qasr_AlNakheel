@@ -54,6 +54,11 @@ const HallReservation = sequelize.define("HallReservation", {
         defaultValue: false,
         allowNull: false,
     },
+    is_deleted: {
+        type: DataTypes.BOOLEAN,
+        defaultValue: false,
+        allowNull: false,
+      }
 }, {
     timestamps: false,
 })

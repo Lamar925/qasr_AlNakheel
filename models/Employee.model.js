@@ -69,6 +69,11 @@ const Employee = sequelize.define("Employee", {
     type: DataTypes.UUID,
     onDelete: "SET NULL",
   },
+  is_deleted: {
+  type: DataTypes.BOOLEAN,
+  defaultValue: false,
+  allowNull: false,
+}
 }, {
   timestamps: false,
 });

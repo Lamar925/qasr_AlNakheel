@@ -66,9 +66,12 @@ export const getPools = async (req, res) => {
     const { page = 1, limit = 10 } = req.query;
     const offset = (page - 1) * limit;
 
-    const poolsCount = await Pool.count();
+    const poolsCount = await Pool.count(
+        { where: { is_deleted: false } }
+    );
 
     const pools = await Pool.findAll({
+        where: { is_deleted: false },
         limit,
         offset,
         include: [
@@ -132,9 +135,11 @@ export const getPools = async (req, res) => {
 };
 
 export const getPoolsName = async (req, res) => {
-    const pools = await Pool.findAll({
-        attributes: ["id", "name"]
-    });
+    const pools = await Pool.findAll(
+        {
+            where: { is_deleted: false },
+            attributes: ["id", "name"]
+        });
     res.status(200).json(pools)
 }
 
@@ -142,7 +147,8 @@ export const getPoolById = async (req, res) => {
     const lang = getLanguage(req);
     const { id } = req.params;
 
-    const pool = await Pool.findByPk(id, {
+    const pool = await Pool.findOne({
+        where: { id: id, is_deleted: false },
         include: [
             { model: PoolImages, as: "images" },
             { model: PoolFacilities, as: "facilities" },
@@ -359,7 +365,8 @@ export const deletePool = async (req, res) => {
         return res.status(404).json({ message: getMessage("poolNotFound", lang) });
     }
 
-    await pool.destroy();
+    pool.is_deleted = true;
+    await pool.save();
 
     res.status(200).json({ message: getMessage("poolDeleted", lang) });
 }

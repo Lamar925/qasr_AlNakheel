@@ -50,6 +50,11 @@ const CustomerRestaurant = sequelize.define("CustomerRestaurant", {
     defaultValue: false,
     allowNull: false,
   },
+  is_deleted: {
+  type: DataTypes.BOOLEAN,
+  defaultValue: false,
+  allowNull: false,
+}
 }, {
   timestamps: false,
 });

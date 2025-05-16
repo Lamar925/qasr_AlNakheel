@@ -36,7 +36,8 @@ export const createBooking = async (req, res) => {
     const availableRooms = await Room.findAll({
         where: {
             type,
-            isActive: true
+            isActive: true,
+            is_deleted: false,
         }
     });
 
@@ -52,6 +53,7 @@ export const createBooking = async (req, res) => {
             where: {
                 room_id: room.id,
                 status: "confirmed",
+                is_deleted: false,
                 [Op.or]: [
                     { check_in_date: { [Op.between]: [check_in_date, check_out_date] } },
                     { check_out_date: { [Op.between]: [check_in_date, check_out_date] } },
@@ -128,7 +130,6 @@ export const createBooking = async (req, res) => {
     return res.status(201).json({ message: getMessage("bookingDone", lang), booking: newBooking });
 };
 
-
 export const createBookingByRoomId = async (req, res) => {
     const lang = getLanguage(req);
     const cust_id = req.params.id;
@@ -165,6 +166,7 @@ export const createBookingByRoomId = async (req, res) => {
         where: {
             room_id: room.id,
             status: "confirmed",
+            is_deleted: false,
             [Op.or]: [
                 { check_in_date: { [Op.between]: [check_in_date, check_out_date] } },
                 { check_out_date: { [Op.between]: [check_in_date, check_out_date] } },
@@ -245,6 +247,7 @@ export const getAllBookings = async (req, res) => {
 
     const whereCondition = {};
 
+    whereCondition.is_deleted = false;
     if (status) {
         whereCondition.status = status;
     }
@@ -299,6 +302,7 @@ export const getBookingsByRoom = async (req, res) => {
     const offset = (page - 1) * limit;
 
     const whereCondition = { room_id };
+    whereCondition.is_deleted = false;
     if (status) {
         whereCondition.status = status;
     }
@@ -333,6 +337,7 @@ export const getBookingsByCustomer = async (req, res) => {
     const offset = (page - 1) * limit;
 
     const whereCondition = { cust_id };
+    whereCondition.is_deleted = false;
     if (status) {
         whereCondition.status = status;
     }
@@ -388,6 +393,7 @@ export const deleteBooking = async (req, res) => {
     if (!booking) {
         return res.status(404).json({ message: getMessage("noBookingsFound", lang) });
     }
-    await booking.destroy();
-    res.status(204).json({ message: getMessage("deleteBooking", lang) });
+    booking.is_deleted = true;
+    await booking.save();
+    res.status(200).json({ message: getMessage("deleteBooking", lang) });
 }

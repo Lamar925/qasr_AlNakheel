@@ -60,6 +60,7 @@ export const getRestaurants = async (req, res) => {
     const lang = getLanguage(req);
 
     const restaurants = await Restaurant.findAll({
+        where: { is_deleted: false },
         include: [
             { model: RestaurantImages, as: "images" },
         ],
@@ -71,7 +72,6 @@ export const getRestaurants = async (req, res) => {
 
     const restaurantIds = restaurants.map(rest => rest.id);
 
-    // ✅ جلب التقييمات المجمعة للمطاعم
     const ratings = await Rating.findAll({
         where: {
             rest_id: {
@@ -86,7 +86,6 @@ export const getRestaurants = async (req, res) => {
         group: ["rest_id"]
     });
 
-    // تجهيز خريطة التقييمات
     const ratingsMap = {};
     ratings.forEach(rating => {
         ratingsMap[rating.rest_id] = {
@@ -95,7 +94,6 @@ export const getRestaurants = async (req, res) => {
         };
     });
 
-    // دمج التقييمات مع المطاعم
     const restaurantsWithRatings = restaurants.map(rest => {
         const ratingData = ratingsMap[rest.id] || { averageRating: "0.0", ratingCount: 0 };
         return {
@@ -112,7 +110,8 @@ export const getRestaurantById = async (req, res) => {
     const lang = getLanguage(req);
     const { id } = req.params;
 
-    const restaurant = await Restaurant.findByPk(id, {
+    const restaurant = await Restaurant.findOne({
+        where: { id: id, is_deleted: false },
         include: [
             { model: RestaurantImages, as: "images" },
         ],
@@ -122,7 +121,6 @@ export const getRestaurantById = async (req, res) => {
         return res.status(404).json({ message: getMessage("restaurantsNotFound", lang) });
     }
 
-    // ✅ جلب تقييم المطعم
     const rating = await Rating.findOne({
         where: { rest_id: id },
         attributes: [
@@ -134,7 +132,6 @@ export const getRestaurantById = async (req, res) => {
     const averageRating = rating?.get("averageRating") ? parseFloat(rating.get("averageRating")).toFixed(1) : "0.0";
     const ratingCount = rating?.get("ratingCount") ? parseInt(rating.get("ratingCount")) : 0;
 
-    // دمج التقييم مع بيانات المطعم
     const restaurantWithRating = {
         ...restaurant.toJSON(),
         averageRating,
@@ -246,7 +243,8 @@ export const deleteRestaurant = async (req, res) => {
         return res.status(404).json({ message: getMessage("restaurantsNotFound", lang) });
     }
 
-    await restaurant.destroy();
+    restaurant.is_deleted = true;
+    await restaurant.save();
 
     res.status(200).json({ message: getMessage("restaurantDeleted", lang) });
 }

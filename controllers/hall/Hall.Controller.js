@@ -1,5 +1,5 @@
 import { createRequire } from "module";
-import { col, fn, Op } from "sequelize";
+import { col, fn, Op, where } from "sequelize";
 const require = createRequire(import.meta.url);
 
 import { deleteImageFromCloudinary } from "../../config/helpers/cloudinary.mjs";
@@ -88,6 +88,7 @@ export const getHalls = async (req, res) => {
     const offset = (page - 1) * limit;
 
     const where = {};
+    where.is_deleted = false;
     if (hallType) {
         where.type = hallType;
     }
@@ -117,7 +118,6 @@ export const getHalls = async (req, res) => {
         return res.status(404).json({ success: false, message: getMessage('hallsNotFound', lang) });
     }
 
-    // بعد جلب القاعات نجيب التقييمات الخاصة بهم
     const hallIds = halls.map(hall => hall.id);
 
     const ratings = await Rating.findAll({
@@ -134,7 +134,6 @@ export const getHalls = async (req, res) => {
         group: ["hall_id"]
     });
 
-    // نحول النتائج إلى شكل يسهل ربطه
     const ratingsMap = {};
     ratings.forEach(rating => {
         ratingsMap[rating.hall_id] = {
@@ -143,7 +142,6 @@ export const getHalls = async (req, res) => {
         };
     });
 
-    // نضيف لكل قاعة تقييمها
     const hallsWithRatings = halls.map(hall => {
         const ratingData = ratingsMap[hall.id] || { averageRating: 0, ratingCount: 0 };
         return {
@@ -158,6 +156,7 @@ export const getHalls = async (req, res) => {
 
 export const getHallsNotAllData = async (req, res) => {
     const halls = await Hall.findAll({
+        where: { is_deleted: false },
         attributes: ["id", "name"]
     });
     res.status(200).json(halls);
@@ -166,7 +165,11 @@ export const getHallsNotAllData = async (req, res) => {
 export const getHallById = async (req, res) => {
     const lang = getLanguage(req);
     const { id } = req.params;
-    const hall = await Hall.findByPk(id, {
+    const hall = await Hall.findOne({
+        where: {
+            id: id,
+            is_deleted: false
+        },
         include: [
             {
                 model: HallFacilities,
@@ -374,7 +377,8 @@ export const deleteHall = async (req, res) => {
         return res.status(404).json({ message: getMessage("hallNotFound", lang) });
     }
 
-    await hall.destroy();
+    hall.is_deleted = true;
+    await hall.save();
 
     res.status(200).json({ message: getMessage("hallDeleted", lang) });
 }

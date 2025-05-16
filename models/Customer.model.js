@@ -67,6 +67,11 @@ const Customer = sequelize.define("Customer", {
   createdAt:{
     type: DataTypes.DATE,
     defaultValue: DataTypes.NOW,
+  },
+  is_deleted: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: false,
+    allowNull: false,
   }
 }, { timestamps: false });
 

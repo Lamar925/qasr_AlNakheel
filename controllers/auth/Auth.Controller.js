@@ -80,7 +80,12 @@ export const logIn = async (req, res) => {
 
     const user = await Customer.findOne({ where: { email }, include: { model: CustomerMobile, attributes: ["mobile_no"] } });
     if (!user) return res.status(400).json({ message: getMessage("userNotFound", lang) });
-
+    if (user.is_deleted) {
+        return res.status(400).json({ message: getMessage("userDeleted", lang) });
+    }
+    if (user.banned) {
+        return res.status(400).json({ message: getMessage("bannedUser", lang) });
+    }
     const mobileNos = user.CustomerMobiles.map(mobile => mobile.mobile_no);
     if (user.auth_provider !== "email" && !user.password) {
         return res.status(400).json({ message: getMessage("notSupported", lang) });
@@ -280,14 +285,12 @@ export const forgotPassword = async (req, res) => {
                 message: 'User not found'
             });
         }
-        // Generate reset token (valid for 1 hour)
         const resetToken = jwt.sign(
             { id: user.id, email: user.email },
             process.env.JWT_RESET_SECRET,
             { expiresIn: '1h' }
         );
 
-        // Email content
         const resetLink = `http://localhost:5173/logIn/reset-password?token=${resetToken}`;
         const mailOptions = {
             from: process.env.EMAIL_USER,
@@ -304,7 +307,6 @@ export const forgotPassword = async (req, res) => {
             }
         });
 
-        // Send the email
         transporter.sendMail(mailOptions, (err, info) => {
             if (err) {
                 return res.status(500).json({
@@ -325,7 +327,7 @@ export const forgotPassword = async (req, res) => {
 
 export const resetPassword = async (req, res) => {
     try {
-        const { token, password } = req.body; // Get token and newPassword from the request body
+        const { token, password } = req.body;
 
         if (!token) {
             return res.status(400).json({
@@ -334,7 +336,6 @@ export const resetPassword = async (req, res) => {
             });
         }
 
-        // Verify the token
         const decoded = jwt.verify(token, process.env.JWT_RESET_SECRET);
         const user = await Customer.findByPk(decoded.id);
 
@@ -344,11 +345,8 @@ export const resetPassword = async (req, res) => {
                 message: 'User not found'
             });
         }
-
-        // Hash the new password
         const hashedPassword = await bcrypt.hash(password, 10);
 
-        // Update the user's password
         user.password = hashedPassword;
         await user.save();
 

@@ -65,6 +65,11 @@ const Rating = sequelize.define("Rating", {
     type: DataTypes.TEXT,
     allowNull: true,
   },
+  is_deleted: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: false,
+    allowNull: false,
+  }
 }, { timestamps: true });
 
 Room.hasMany(Rating, { foreignKey: "room_id" });

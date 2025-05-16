@@ -18,19 +18,15 @@ const Pool = require("../../models/Pool.model");
 const Hall = require("../../models/Hall.model");
 
 export const getDashboardDetails = async (req, res) => {
-    // بيانات العملاء
     const allCustomers = await Customer.count();
     const verifiedCustomers = await Customer.count({ where: { is_verified: true } });
 
-    // بيانات الحجوزات
     const unpaidBookings = await Booking.count({ where: { payed: false } });
     const confirmedBookings = await Booking.count({ where: { status: 'confirmed' } });
     const canceledBookings = await Booking.count({ where: { status: 'canceled' } });
 
-    // بيانات الرسائل
     const unreadMessages = await Contact.count({ where: { status: 'unread' } });
 
-    // بيانات المدفوعات
     const totalRevenueThisMonth = await Payment.sum('payment_amount', {
         where: {
             payment_date: {
@@ -42,14 +38,13 @@ export const getDashboardDetails = async (req, res) => {
         }
     });
 
-    // بيانات الغرف
     const occupiedRooms = await Booking.findAll({
         attributes: [[sequelize.fn('DISTINCT', sequelize.col('room_id')), 'room_id']],
         where: {
             status: 'confirmed',
             [Op.and]: [
-                { check_in_date: { [Op.lte]: new Date() } }, // تاريخ الوصول أقل من أو يساوي اليوم
-                { check_out_date: { [Op.gte]: new Date() } }  // تاريخ المغادرة أكبر من أو يساوي اليوم
+                { check_in_date: { [Op.lte]: new Date() } }, 
+                { check_out_date: { [Op.gte]: new Date() } }
             ]
         },
         raw: true
@@ -61,7 +56,6 @@ export const getDashboardDetails = async (req, res) => {
     const totalRooms = await Room.count();
     const availableRoomsCount = totalRooms - occupiedRoomsCount;
 
-    // Pool data
     const poolReservationsThisMonth = await CustomerPool.count({
         where: {
             reservation_time: {
@@ -73,7 +67,6 @@ export const getDashboardDetails = async (req, res) => {
         }
     });
 
-    // Restaurant data
     const restaurantReservationsThisMonth = await CustomerRestaurant.count({
         where: {
             reservation_date: {
@@ -85,7 +78,6 @@ export const getDashboardDetails = async (req, res) => {
         }
     });
 
-    // Hall data
     const hallReservationsThisMonth = await HallReservation.count({
         where: {
             start_time: {
@@ -97,17 +89,15 @@ export const getDashboardDetails = async (req, res) => {
         }
     });
 
-    // Rating data
     const averageRoomRating = await Rating.findOne({
         attributes: [[sequelize.fn('AVG', sequelize.col('rating')), 'avgRating']],
         where: { room_id: { [Op.not]: null } }
     });
     const avgRating = parseFloat(averageRoomRating.dataValues.avgRating).toFixed(2);
-    // بيانات الموظفين
+
     const activeEmployees = await Employee.count({ where: { status: 'Active' } });
     const inactiveEmployees = await Employee.count({ where: { status: 'Inactive' } });
 
-    // تنظيم البيانات للعرض
     const data = [
         {
             title: { ar: "عدد العملاء", en: "Customer Count" },
@@ -243,12 +233,15 @@ export const getSomeDataForUser = async (req, res) => {
 export const getAllworkPlaces = async (req, res) => {
     const [pools, restaurants, halls] = await Promise.all([
         Pool.findAll({
+            where: { is_deleted: false },
             attributes: ['id', 'name']
         }),
         Restaurant.findAll({
+            where: { is_deleted: false },
             attributes: ['id', 'name']
         }),
         Hall.findAll({
+            where: { is_deleted: false },
             attributes: ['id', 'name']
         })
     ]);

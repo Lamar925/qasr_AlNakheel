@@ -41,6 +41,11 @@ const Hall = sequelize.define("Hall", {
   suitable_for: {
     type: DataTypes.JSON,
   },
+  is_deleted: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: false,
+    allowNull: false,
+  }
 }, {
   timestamps: false,
 });
